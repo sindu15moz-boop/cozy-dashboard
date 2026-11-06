@@ -2,82 +2,202 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Detcho Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cozy Productivity</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #ffffff; color: #000; overflow-x: hidden; }
-  body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 8px; }
-  .calc { width: 100%; max-width: 360px; background: #fff; border-radius: 18px; padding: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 8px; }
-  .display { background: #eaf2fb; border-radius: 12px; padding: 10px 14px; min-height: 82px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; overflow: hidden; }
-  .expression { font-size: 13px; color: #6b7a8f; text-align: right; min-height: 18px; white-space: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
-  .expression::-webkit-scrollbar { display: none; }
-  .result { font-size: 26px; font-weight: 600; color: #000; text-align: right; white-space: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; line-height: 1.1; }
-  .result::-webkit-scrollbar { display: none; }
-  .mode-row { display: flex; gap: 6px; justify-content: flex-end; }
-  .mode-btn { padding: 4px 12px; font-size: 11px; font-weight: 700; letter-spacing: 1px; border: 1px solid #cfe0f3; background: #fff; color: #000; border-radius: 8px; cursor: pointer; transition: all 0.15s ease; }
-  .mode-btn.active { background: #a9cdf5; border-color: #a9cdf5; }
-  .mode-btn:active { transform: scale(0.95); }
-  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .btn { border: none; border-radius: 10px; background: #d6e7fa; color: #000; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: transform 0.08s ease, background 0.15s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.08); user-select: none; font-size: 15px; aspect-ratio: 1 / 1; min-height: 0; }
-  .btn:active { transform: scale(0.94); background: #b9d6f2; box-shadow: none; }
-  .btn.num { font-size: 17px; font-weight: 600; }
-  .btn.op  { background: #c2dcf7; font-size: 17px; font-weight: 600; }
-  .btn.fn  { font-size: 12px; }
-  .btn.eq  { background: #a9cdf5; font-weight: 700; font-size: 18px; }
-  .btn.ac  { background: #f5d6d6; font-weight: 700; font-size: 13px; }
-  .signature { margin-top: 22px; font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 30px; font-style: italic; color: #000; text-align: center; letter-spacing: 1px; opacity: 0.85; }
-  @media (max-width: 360px) { .btn { font-size: 13px; } .btn.num, .btn.op { font-size: 15px; } .btn.fn { font-size: 10px; } .btn.eq { font-size: 16px; } .result { font-size: 22px; } .signature { font-size: 26px; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --dark-choc: #3b2317; --coffee: #6b4226; --caramel: #a97142; --mocha: #8b5a3c; --beige: #d4b896; --cream: #f0e0c8; --off-white: #faf5ed; --shadow: 0 4px 20px rgba(59, 35, 23, 0.12); --shadow-lg: 0 8px 32px rgba(59, 35, 23, 0.18); --radius: 16px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Poppins", Roboto, sans-serif; background: linear-gradient(135deg, #faf5ed 0%, #f0e0c8 50%, #e8d4b8 100%); color: var(--dark-choc); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ""; position: fixed; inset: 0; background-image: radial-gradient(circle at 10% 20%, rgba(212, 184, 150, 0.35) 0%, transparent 30%), radial-gradient(circle at 90% 80%, rgba(169, 113, 66, 0.15) 0%, transparent 35%), radial-gradient(circle at 50% 50%, rgba(240, 224, 200, 0.4) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+  .app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+  .sidebar { width: 240px; background: linear-gradient(180deg, var(--dark-choc) 0%, var(--coffee) 100%); color: var(--cream); padding: 28px 18px; display: flex; flex-direction: column; gap: 6px; box-shadow: 4px 0 24px rgba(59, 35, 23, 0.15); position: sticky; top: 0; height: 100vh; transition: transform 0.3s ease; }
+  .brand { font-size: 22px; font-weight: 800; margin-bottom: 24px; letter-spacing: -0.5px; color: var(--cream); display: flex; align-items: center; gap: 8px; }
+  .brand::before { content: "☕"; font-size: 26px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease; color: var(--beige); border: 1px solid transparent; }
+  .nav-item:hover { background: rgba(212, 184, 150, 0.1); color: var(--cream); }
+  .nav-item.active { background: linear-gradient(135deg, var(--caramel), var(--mocha)); color: #fff; box-shadow: 0 4px 12px rgba(169, 113, 66, 0.35); border-color: rgba(255,255,255,0.1); }
+  .nav-item .icon { font-size: 18px; }
+  .main { flex: 1; padding: 32px 40px; max-width: calc(100% - 240px); overflow-y: auto; height: 100vh; }
+  .page { display: none; animation: fade 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  h1 { font-size: 32px; font-weight: 800; margin-bottom: 6px; letter-spacing: -1px; background: linear-gradient(135deg, var(--dark-choc), var(--coffee)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: var(--mocha); font-size: 14px; font-weight: 500; margin-bottom: 28px; }
+  .card { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid rgba(212, 184, 150, 0.3); margin-bottom: 20px; }
+  .task-input-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .task-input-row input, .task-input-row select { padding: 12px 16px; border-radius: 12px; border: 2px solid var(--beige); background: var(--off-white); font-family: inherit; font-size: 14px; color: var(--dark-choc); outline: none; transition: border 0.2s; }
+  .task-input-row input:focus, .task-input-row select:focus { border-color: var(--caramel); }
+  .task-input-row input.task-title { flex: 1; min-width: 200px; }
+  button { padding: 12px 20px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--caramel), var(--coffee)); color: #fff; font-weight: 700; font-family: inherit; font-size: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(169, 113, 66, 0.25); }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(169, 113, 66, 0.35); }
+  button:active { transform: translateY(0); }
+  button.ghost { background: transparent; color: var(--coffee); border: 2px solid var(--beige); box-shadow: none; }
+  button.ghost:hover { background: var(--cream); }
+  button.danger { background: linear-gradient(135deg, #c0392b, #a93226); }
+  button.small { padding: 6px 12px; font-size: 12px; }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-box { background: linear-gradient(135deg, var(--cream), var(--off-white)); padding: 16px; border-radius: 12px; border: 1px solid var(--beige); }
+  .stat-label { font-size: 11px; font-weight: 700; color: var(--mocha); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 26px; font-weight: 800; color: var(--dark-choc); margin-top: 4px; }
+  .progress-bar { height: 12px; background: var(--cream); border-radius: 20px; overflow: hidden; margin: 8px 0; border: 1px solid var(--beige); }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--caramel), var(--coffee)); border-radius: 20px; transition: width 0.4s ease; }
+  .task-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--off-white); border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--beige); transition: all 0.2s; }
+  .task-item:hover { border-color: var(--caramel); box-shadow: 0 2px 8px rgba(169, 113, 66, 0.1); }
+  .task-item.done { opacity: 0.65; }
+  .task-item.done .task-text { text-decoration: line-through; color: var(--mocha); }
+  .task-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--caramel); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--off-white); transition: all 0.2s; }
+  .task-check.checked { background: linear-gradient(135deg, var(--caramel), var(--coffee)); border-color: var(--coffee); color: #fff; }
+  .task-check.checked::after { content: "✓"; font-weight: 900; font-size: 14px; }
+  .task-body { flex: 1; min-width: 0; }
+  .task-text { font-weight: 600; font-size: 15px; color: var(--dark-choc); word-break: break-word; }
+  .task-meta { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge.cat { background: var(--cream); color: var(--coffee); border: 1px solid var(--beige); }
+  .badge.prio-high { background: #f8d7da; color: #842029; }
+  .badge.prio-medium { background: #fff3cd; color: #664d03; }
+  .badge.prio-low { background: #d1e7dd; color: #0f5132; }
+  .task-actions { display: flex; gap: 6px; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--cream); color: var(--coffee); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: none; padding: 0; }
+  .icon-btn:hover { background: var(--beige); transform: none; }
+  .icon-btn.danger:hover { background: #f8d7da; color: #842029; }
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px; }
+  .day-card { background: var(--off-white); border-radius: 12px; padding: 14px 8px; text-align: center; border: 2px solid var(--beige); transition: all 0.2s; }
+  .day-card.today { border-color: var(--caramel); background: var(--cream); }
+  .day-name { font-size: 11px; font-weight: 700; color: var(--mocha); text-transform: uppercase; }
+  .day-pct { font-size: 20px; font-weight: 800; color: var(--dark-choc); margin: 4px 0; }
+  .day-count { font-size: 10px; color: var(--mocha); }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; }
+  .month-title { font-size: 22px; font-weight: 800; color: var(--dark-choc); }
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 20px; }
+  .month-dow { font-size: 10px; font-weight: 700; color: var(--mocha); text-align: center; padding: 4px 0; text-transform: uppercase; }
+  .month-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--dark-choc); background: var(--off-white); border: 1px solid var(--beige); cursor: default; transition: all 0.2s; }
+  .month-cell.today { border: 2px solid var(--caramel); }
+  .month-cell.has-data { background: var(--cream); }
+  .month-cell .cell-pct { font-size: 9px; font-weight: 600; color: var(--coffee); }
+  .month-cell.empty { background: transparent; border: none; }
+  .goal-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240, 224, 200, 0.8)); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; border: 1px solid var(--beige); box-shadow: var(--shadow); transition: all 0.2s; }
+  .goal-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .goal-card.completed { opacity: 0.7; }
+  .goal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .goal-title { font-size: 18px; font-weight: 800; color: var(--dark-choc); }
+  .goal-desc { font-size: 13px; color: var(--mocha); margin-bottom: 12px; line-height: 1.5; }
+  .goal-meta { display: flex; gap: 12px; font-size: 11px; color: var(--coffee); font-weight: 600; margin-bottom: 8px; flex-wrap: wrap; }
+  .goal-actions { display: flex; gap: 6px; margin-top: 12px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(59, 35, 23, 0.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--off-white); border-radius: var(--radius); padding: 24px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
+  .modal h2 { font-size: 20px; font-weight: 800; margin-bottom: 16px; color: var(--dark-choc); }
+  .modal label { display: block; font-size: 12px; font-weight: 700; color: var(--mocha); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal input, .modal textarea, .modal select { width: 100%; padding: 10px 14px; border-radius: 10px; border: 2px solid var(--beige); background: #fff; font-family: inherit; font-size: 14px; color: var(--dark-choc); margin-bottom: 12px; outline: none; }
+  .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--caramel); }
+  .modal textarea { resize: vertical; min-height: 70px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .mobile-toggle { display: none; position: fixed; top: 16px; left: 16px; z-index: 50; width: 44px; height: 44px; border-radius: 12px; background: var(--dark-choc); color: #fff; border: none; font-size: 20px; cursor: pointer; box-shadow: var(--shadow); }
+  @media (max-width: 768px) {
+    .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+    .sidebar { position: fixed; left: 0; top: 0; z-index: 40; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { padding: 72px 16px 24px; max-width: 100%; }
+    h1 { font-size: 24px; }
+    .week-grid { grid-template-columns: repeat(4, 1fr); }
+    .stat-value { font-size: 20px; }
+    .task-input-row input.task-title { min-width: 100%; }
+  }
+  .overlay-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 35; }
+  .overlay-backdrop.active { display: block; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--mocha); font-size: 14px; font-style: italic; }
 </style>
 </head>
 <body>
-<div class="calc">
-  <div class="display">
-    <div class="expression" id="expression"></div>
-    <div class="result" id="result">0</div>
-  </div>
-  <div class="mode-row">
-    <button class="mode-btn active" id="degBtn">DEG</button>
-    <button class="mode-btn" id="radBtn">RAD</button>
-  </div>
-  <div class="grid" id="grid">
-    <button class="btn fn" data-fn="sin">sin</button>
-    <button class="btn fn" data-fn="cos">cos</button>
-    <button class="btn fn" data-fn="tan">tan</button>
-    <button class="btn fn" data-fn="log">log</button>
-    <button class="btn fn" data-fn="ln">ln</button>
-    <button class="btn fn" data-fn="sq">x²</button>
-    <button class="btn fn" data-fn="pow">xʸ</button>
-    <button class="btn fn" data-fn="sqrt">√</button>
-    <button class="btn fn" data-fn="inv">1/x</button>
-    <button class="btn fn" data-fn="pi">π</button>
-    <button class="btn fn" data-fn="e">e</button>
-    <button class="btn ac" data-ac>AC</button>
-    <button class="btn fn" data-del>DEL</button>
-    <button class="btn op" data-op="(">(</button>
-    <button class="btn op" data-op=")">)</button>
-    <button class="btn num" data-num="7">7</button>
-    <button class="btn num" data-num="8">8</button>
-    <button class="btn num" data-num="9">9</button>
-    <button class="btn op" data-op="÷">÷</button>
-    <button class="btn op" data-op="%">%</button>
-    <button class="btn num" data-num="4">4</button>
-    <button class="btn num" data-num="5">5</button>
-    <button class="btn num" data-num="6">6</button>
-    <button class="btn op" data-op="×">×</button>
-    <button class="btn op" data-op="−">−</button>
-    <button class="btn num" data-num="1">1</button>
-    <button class="btn num" data-num="2">2</button>
-    <button class="btn num" data-num="3">3</button>
-    <button class="btn op" data-op="+">+</button>
-    <button class="btn eq" data-eq>=</button>
-    <button class="btn num" data-num="0" style="grid-column: span 2;">0</button>
-    <button class="btn num" data-num=".">.</button>
-    <button class="btn fn" data-fn="neg">±</button>
-    <button class="btn fn" data-fn="ans">Ans</button>
+<button class="mobile-toggle" id="mobileToggle">☰</button>
+<div class="overlay-backdrop" id="backdrop"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Cozy</div>
+    <div class="nav-item active" data-page="daily"><span class="icon">📝</span><span>Daily Tasks</span></div>
+    <div class="nav-item" data-page="weekly"><span class="icon">📊</span><span>Weekly Progress</span></div>
+    <div class="nav-item" data-page="monthly"><span class="icon">📅</span><span>Monthly Progress</span></div>
+    <div class="nav-item" data-page="goals"><span class="icon">🎯</span><span>Goals List</span></div>
+  </aside>
+  <main class="main">
+    <section class="page active" id="page-daily">
+      <h1>Daily Tasks</h1>
+      <p class="subtitle" id="todayDate"></p>
+      <div class="card">
+        <div class="task-input-row">
+          <input type="text" class="task-title" id="taskTitle" placeholder="What do you need to do today?" maxlength="120">
+          <select id="taskCategory"><option value="">No category</option><option>Work</option><option>Study</option><option>Personal</option><option>Health</option><option>Home</option></select>
+          <select id="taskPriority"><option value="">No priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+          <button id="addTaskBtn">+ Add</button>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-label">Total Tasks</div><div class="stat-value" id="statTotal">0</div></div>
+          <div class="stat-box"><div class="stat-label">Completed</div><div class="stat-value" id="statDone">0</div></div>
+          <div class="stat-box"><div class="stat-label">Remaining</div><div class="stat-value" id="statRemain">0</div></div>
+          <div class="stat-box"><div class="stat-label">Progress</div><div class="stat-value" id="statPct">0%</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="dailyProgress" style="width:0%"></div></div>
+        <div id="taskList" style="margin-top: 20px;"></div>
+      </div>
+    </section>
+    <section class="page" id="page-weekly">
+      <h1>Weekly Progress</h1>
+      <p class="subtitle">Your productivity over the last 7 days</p>
+      <div class="card">
+        <div class="week-grid" id="weekGrid"></div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-label">Weekly Progress</div><div class="stat-value" id="weekPct">0%</div></div>
+          <div class="stat-box"><div class="stat-label">Completed</div><div class="stat-value" id="weekDone">0</div></div>
+          <div class="stat-box"><div class="stat-label">Best Day</div><div class="stat-value" id="weekBest" style="font-size:16px;">—</div></div>
+        </div>
+      </div>
+    </section>
+    <section class="page" id="page-monthly">
+      <h1>Monthly Progress</h1>
+      <p class="subtitle">Overview of your month</p>
+      <div class="card">
+        <div class="month-nav">
+          <button class="ghost" id="prevMonth">‹ Prev</button>
+          <div class="month-title" id="monthTitle"></div>
+          <button class="ghost" id="nextMonth">Next ›</button>
+        </div>
+        <div class="month-grid" id="monthGrid"></div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-label">Monthly Progress</div><div class="stat-value" id="monthPct">0%</div></div>
+          <div class="stat-box"><div class="stat-label">Completed</div><div class="stat-value" id="monthDone">0</div></div>
+          <div class="stat-box"><div class="stat-label">Incomplete</div><div class="stat-value" id="monthIncomplete">0</div></div>
+          <div class="stat-box"><div class="stat-label">Best Week</div><div class="stat-value" id="monthBestWeek" style="font-size:16px;">—</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="monthProgressBar" style="width:0%"></div></div>
+      </div>
+    </section>
+    <section class="page" id="page-goals">
+      <h1>Goals List</h1>
+      <p class="subtitle">Long-term goals that matter</p>
+      <div class="card"><button id="addGoalBtn">+ New Goal</button></div>
+      <div id="goalList"></div>
+    </section>
+  </main>
+</div>
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <h2>Edit Task</h2>
+    <label>Title</label><input type="text" id="editTaskTitle" maxlength="120">
+    <label>Category</label><select id="editTaskCategory"><option value="">No category</option><option>Work</option><option>Study</option><option>Personal</option><option>Health</option><option>Home</option></select>
+    <label>Priority</label><select id="editTaskPriority"><option value="">No priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+    <div class="modal-actions"><button class="ghost" id="cancelTaskEdit">Cancel</button><button id="saveTaskEdit">Save</button></div>
   </div>
 </div>
-<div class="signature">Detcho</div>
+<div class="modal-overlay" id="goalModal">
+  <div class="modal">
+    <h2 id="goalModalTitle">New Goal</h2>
+    <label>Title</label><input type="text" id="goalTitle" maxlength="120" placeholder="e.g. Read 12 books">
+    <label>Description</label><textarea id="goalDesc" maxlength="300" placeholder="Optional short description"></textarea>
+    <label>Target Date</label><input type="date" id="goalTarget">
+    <label>Progress (%)</label><input type="number" id="goalProgress" min="0" max="100" value="0">
+    <div class="modal-actions"><button class="ghost" id="cancelGoal">Cancel</button><button id="saveGoal">Save</button></div>
+  </div>
+</div>
 <script src="script.js"></script>
 </body>
 </html>
