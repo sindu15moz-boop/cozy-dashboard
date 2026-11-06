@@ -1,146 +1,134 @@
 (function () {
   "use strict";
-  let expression = "";
-  let lastAnswer = 0;
-  let angleMode = "DEG";
-  const elExpr = document.getElementById("expression");
-  const elRes  = document.getElementById("result");
-  const degBtn = document.getElementById("degBtn");
-  const radBtn = document.getElementById("radBtn");
-
-  function render() { elExpr.textContent = expression || ""; }
-  function showResult(v) { elRes.textContent = v; }
-  function tokenize(str) {
-    const tokens = [];
-    let i = 0;
-    while (i < str.length) {
-      const c = str[i];
-      if (c === " " || c === "\t") { i++; continue; }
-      if (/[0-9.]/.test(c)) {
-        let num = "";
-        while (i < str.length && /[0-9.]/.test(str[i])) { num += str[i]; i++; }
-        if ((num.match(/\./g) || []).length > 1) throw new Error("bad");
-        tokens.push({ type: "num", value: parseFloat(num) });
-        continue;
-      }
-      if ("+-*/^%()".includes(c)) { tokens.push({ type: "op", value: c }); i++; continue; }
-      const match = /^(sin|cos|tan|log|ln|sqrt|pi|e)/.exec(str.slice(i));
-      if (match) { tokens.push({ type: "name", value: match[1] }); i += match[1].length; continue; }
-      throw new Error("bad");
-    }
-    return tokens;
-  }
-  function parse(tokens) {
-    let pos = 0;
-    function peek() { return tokens[pos]; }
-    function next() { return tokens[pos++]; }
-    function expect(v) { if (!peek() || peek().value !== v) throw new Error("bad"); pos++; }
-    function parseExpr() {
-      let left = parseTerm();
-      while (peek() && (peek().value === "+" || peek().value === "-")) {
-        const op = next().value; const right = parseTerm();
-        left = op === "+" ? left + right : left - right;
-      }
-      return left;
-    }
-    function parseTerm() {
-      let left = parseUnary();
-      while (peek() && (peek().value === "*" || peek().value === "/" || peek().value === "%")) {
-        const op = next().value; const right = parseUnary();
-        if (op === "*") left *= right;
-        else if (op === "/") { if (right === 0) throw new Error("div0"); left /= right; }
-        else { left = left * (right / 100); }
-      }
-      return left;
-    }
-    function parseUnary() {
-      if (peek() && peek().value === "-") { next(); return -parseUnary(); }
-      if (peek() && peek().value === "+") { next(); return parseUnary(); }
-      return parsePower();
-    }
-    function parsePower() {
-      const base = parsePrimary();
-      if (peek() && peek().value === "^") { next(); return Math.pow(base, parseUnary()); }
-      return base;
-    }
-    function parsePrimary() {
-      const t = peek(); if (!t) throw new Error("bad");
-      if (t.type === "num") { next(); return t.value; }
-      if (t.value === "(") { next(); const v = parseExpr(); expect(")"); return v; }
-      if (t.type === "name") {
-        next(); const name = t.value;
-        if (name === "pi") return Math.PI;
-        if (name === "e") return Math.E;
-        expect("("); const arg = parseExpr(); expect(")");
-        switch (name) {
-          case "sin": return Math.sin(angleMode === "DEG" ? arg * Math.PI / 180 : arg);
-          case "cos": return Math.cos(angleMode === "DEG" ? arg * Math.PI / 180 : arg);
-          case "tan": return Math.tan(angleMode === "DEG" ? arg * Math.PI / 180 : arg);
-          case "log": if (arg <= 0) throw new Error("bad"); return Math.log10(arg);
-          case "ln": if (arg <= 0) throw new Error("bad"); return Math.log(arg);
-          case "sqrt": if (arg < 0) throw new Error("bad"); return Math.sqrt(arg);
+  const STORE_KEY = "cozy_productivity_v1";
+  let state = { tasks: {}, goals: [] };
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          state.tasks = parsed.tasks || {};
+          state.goals = Array.isArray(parsed.goals) ? parsed.goals : [];
         }
       }
-      throw new Error("bad");
-    }
-    const result = parseExpr();
-    if (pos !== tokens.length) throw new Error("bad");
-    if (!isFinite(result)) throw new Error("bad");
-    return result;
+    } catch (e) {}
   }
-  function safeEval(expr) {
-    if (!expr || !expr.trim()) throw new Error("empty");
-    return parse(tokenize(expr));
-  }
-  function formatNumber(n) {
-    if (Number.isInteger(n)) return String(n);
-    return String(parseFloat(n.toPrecision(12)));
-  }
-  function append(str) { expression += str; render(); livePreview(); }
-  function livePreview() {
-    try { if (!expression) { showResult("0"); return; } showResult(formatNumber(safeEval(expression))); } catch (e) {}
-  }
-  function clearAll() { expression = ""; render(); showResult("0"); }
-  function del() { expression = expression.slice(0, -1); render(); if (!expression) showResult("0"); else livePreview(); }
-  function calculate() {
-    if (!expression) return;
-    try {
-      const val = safeEval(expression); lastAnswer = val;
-      showResult(formatNumber(val)); expression = formatNumber(val); render();
-    } catch (e) { showResult("Invalid expression"); }
-  }
-  document.getElementById("grid").addEventListener("click", function (ev) {
-    const btn = ev.target.closest("button"); if (!btn) return;
-    if (btn.dataset.num !== undefined) return append(btn.dataset.num);
-    if (btn.dataset.op  !== undefined) { const op = btn.dataset.op; if (op === "×") append("*"); else if (op === "÷") append("/"); else if (op === "−") append("-"); else append(op); return; }
-    if (btn.hasAttribute("data-ac"))  return clearAll();
-    if (btn.hasAttribute("data-del")) return del();
-    if (btn.hasAttribute("data-eq"))  return calculate();
-    const fn = btn.dataset.fn;
-    switch (fn) {
-      case "sin": append("sin("); break; case "cos": append("cos("); break; case "tan": append("tan("); break;
-      case "log": append("log("); break; case "ln": append("ln("); break; case "sqrt": append("sqrt("); break;
-      case "sq": try { if (!expression) return; const v = safeEval(expression); expression = formatNumber(v * v); render(); showResult(expression); } catch (e) { showResult("Invalid expression"); } break;
-      case "pow": append("^"); break;
-      case "inv": try { if (!expression) return; const v = safeEval(expression); if (v === 0) { showResult("Invalid expression"); return; } expression = formatNumber(1 / v); render(); showResult(expression); } catch (e) { showResult("Invalid expression"); } break;
-      case "pi": append("pi"); break; case "e": append("e"); break;
-      case "neg": if (!expression) break; if (expression.startsWith("-(") && expression.endsWith(")")) expression = expression.slice(2, -1); else expression = "-(" + expression + ")"; render(); livePreview(); break;
-      case "ans": append(String(lastAnswer)); break;
-    }
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+  function todayKey() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+  function dateKey(d) { return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  const navItems = document.querySelectorAll(".nav-item");
+  const pages = document.querySelectorAll(".page");
+  const sidebar = document.getElementById("sidebar");
+  const backdrop = document.getElementById("backdrop");
+  navItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const target = item.dataset.page;
+      navItems.forEach(n => n.classList.remove("active"));
+      item.classList.add("active");
+      pages.forEach(p => p.classList.remove("active"));
+      document.getElementById("page-" + target).classList.add("active");
+      sidebar.classList.remove("open");
+      backdrop.classList.remove("active");
+      if (target === "weekly") renderWeekly();
+      if (target === "monthly") renderMonthly();
+      if (target === "goals") renderGoals();
+    });
   });
-  function setMode(m) { angleMode = m; degBtn.classList.toggle("active", m === "DEG"); radBtn.classList.toggle("active", m === "RAD"); livePreview(); }
-  degBtn.addEventListener("click", () => setMode("DEG"));
-  radBtn.addEventListener("click", () => setMode("RAD"));
-  document.addEventListener("keydown", function (ev) {
-    const k = ev.key;
-    if (/^[0-9]$/.test(k)) { append(k); ev.preventDefault(); return; }
-    if (k === ".") { append("."); ev.preventDefault(); return; }
-    if (k === "+" || k === "-" || k === "*" || k === "/") { append(k); ev.preventDefault(); return; }
-    if (k === "(" || k === ")") { append(k); ev.preventDefault(); return; }
-    if (k === "^") { append("^"); ev.preventDefault(); return; }
-    if (k === "Enter" || k === "=") { calculate(); ev.preventDefault(); return; }
-    if (k === "Backspace") { del(); ev.preventDefault(); return; }
-    if (k === "Escape") { clearAll(); ev.preventDefault(); return; }
+  document.getElementById("mobileToggle").addEventListener("click", () => { sidebar.classList.toggle("open"); backdrop.classList.toggle("active"); });
+  backdrop.addEventListener("click", () => { sidebar.classList.remove("open"); backdrop.classList.remove("active"); });
+  const todayDateEl = document.getElementById("todayDate");
+  const taskList = document.getElementById("taskList");
+  function formatDate(d) { return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }); }
+  function getTodayTasks() { return state.tasks[todayKey()] || []; }
+  function setTodayTasks(list) { state.tasks[todayKey()] = list; save(); }
+  function renderDaily() {
+    todayDateEl.textContent = formatDate(new Date());
+    const tasks = getTodayTasks();
+    const total = tasks.length;
+    const done = tasks.filter(t => t.done).length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    document.getElementById("statTotal").textContent = total;
+    document.getElementById("statDone").textContent = done;
+    document.getElementById("statRemain").textContent = total - done;
+    document.getElementById("statPct").textContent = pct + "%";
+    document.getElementById("dailyProgress").style.width = pct + "%";
+    taskList.innerHTML = "";
+    if (tasks.length === 0) { taskList.innerHTML = '<div class="empty-state">No tasks yet. Add one above to get started ☕</div>'; return; }
+    tasks.forEach(task => {
+      const el = document.createElement("div");
+      el.className = "task-item" + (task.done ? " done" : "");
+      el.innerHTML = `
+        <div class="task-check ${task.done ? "checked" : ""}" data-act="toggle" data-id="${task.id}"></div>
+        <div class="task-body"><div class="task-text">${escapeHtml(task.title)}</div>
+        <div class="task-meta">${task.category ? `<span class="badge cat">${escapeHtml(task.category)}</span>` : ""}${task.priority ? `<span class="badge prio-${task.priority}">${task.priority}</span>` : ""}</div></div>
+        <div class="task-actions"><button class="icon-btn" data-act="edit" data-id="${task.id}">✏️</button><button class="icon-btn danger" data-act="del" data-id="${task.id}">🗑️</button></div>`;
+      taskList.appendChild(el);
+    });
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+  document.getElementById("addTaskBtn").addEventListener("click", () => {
+    const title = document.getElementById("taskTitle").value.trim();
+    if (!title) return;
+    const tasks = getTodayTasks();
+    tasks.push({ id: uid(), title, done: false, category: document.getElementById("taskCategory").value, priority: document.getElementById("taskPriority").value });
+    setTodayTasks(tasks);
+    document.getElementById("taskTitle").value = "";
+    renderDaily();
   });
-  clearAll();
-})();
+  document.getElementById("taskTitle").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("addTaskBtn").click(); });
+  taskList.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-act]"); if (!btn) return;
+    const id = btn.dataset.id, act = btn.dataset.act;
+    const tasks = getTodayTasks(), idx = tasks.findIndex(t => t.id === id);
+    if (idx === -1) return;
+    if (act === "toggle") { tasks[idx].done = !tasks[idx].done; setTodayTasks(tasks); renderDaily(); }
+    else if (act === "del") { tasks.splice(idx, 1); setTodayTasks(tasks); renderDaily(); }
+    else if (act === "edit") { openTaskEdit(tasks[idx]); }
+  });
+  let editingTaskId = null;
+  function openTaskEdit(task) {
+    editingTaskId = task.id;
+    document.getElementById("editTaskTitle").value = task.title;
+    document.getElementById("editTaskCategory").value = task.category || "";
+    document.getElementById("editTaskPriority").value = task.priority || "";
+    document.getElementById("taskModal").classList.add("active");
+  }
+  document.getElementById("cancelTaskEdit").addEventListener("click", () => { document.getElementById("taskModal").classList.remove("active"); });
+  document.getElementById("saveTaskEdit").addEventListener("click", () => {
+    const tasks = getTodayTasks(), t = tasks.find(x => x.id === editingTaskId);
+    if (t) { t.title = document.getElementById("editTaskTitle").value.trim() || t.title; t.category = document.getElementById("editTaskCategory").value; t.priority = document.getElementById("editTaskPriority").value; setTodayTasks(tasks); renderDaily(); }
+    document.getElementById("taskModal").classList.remove("active");
+  });
+  function renderWeekly() {
+    const grid = document.getElementById("weekGrid"); grid.innerHTML = "";
+    const now = new Date(), days = [];
+    for (let i = 6; i >= 0; i--) { const d = new Date(now); d.setDate(now.getDate() - i); days.push(d); }
+    let totalTasks = 0, totalDone = 0, bestDay = null, bestPct = -1;
+    days.forEach(d => {
+      const key = dateKey(d), tasks = state.tasks[key] || [], t = tasks.length, done = tasks.filter(x => x.done).length;
+      const pct = t ? Math.round((done/t)*100) : 0; totalTasks += t; totalDone += done;
+      if (t > 0 && pct > bestPct) { bestPct = pct; bestDay = d; }
+      const card = document.createElement("div"); card.className = "day-card" + (key === todayKey() ? " today" : "");
+      card.innerHTML = `<div class="day-name">${d.toLocaleDateString("en-US", { weekday: "short" })}</div><div class="day-pct">${pct}%</div><div class="day-count">${done}/${t}</div>`;
+      grid.appendChild(card);
+    });
+    document.getElementById("weekPct").textContent = (totalTasks ? Math.round((totalDone/totalTasks)*100) : 0) + "%";
+    document.getElementById("weekDone").textContent = totalDone;
+    document.getElementById("weekBest").textContent = bestDay ? bestDay.toLocaleDateString("en-US", { weekday: "long" }) + " (" + bestPct + "%)" : "—";
+  }
+  let currentMonth = new Date(); currentMonth.setDate(1);
+  function renderMonthly() {
+    const year = currentMonth.getFullYear(), month = currentMonth.getMonth();
+    document.getElementById("monthTitle").textContent = currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const grid = document.getElementById("monthGrid"); grid.innerHTML = "";
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d => { const el = document.createElement("div"); el.className = "month-dow"; el.textContent = d; grid.appendChild(el); });
+    const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) { const el = document.createElement("div"); el.className = "month-cell empty"; grid.appendChild(el); }
+    let mTasks = 0, mDone = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(year, month, day), key = dateKey(d), tasks = state.tasks[key] || [], t = tasks.length, done = tasks.filter(x => x.done).length;
+      const pct = t ? Math.round((done/t)*100) : 0; mTasks += t; mDone += done;
+      const el = document.createElement("div"); el.className = "month-cell" + (key === todayKey() ? " today" : "") + (t > 0 ? " has-data" : "");
+      el.innerHTML = `<div>${day}</div>${t > 0 ?
