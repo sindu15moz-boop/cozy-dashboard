@@ -131,4 +131,49 @@
       const d = new Date(year, month, day), key = dateKey(d), tasks = state.tasks[key] || [], t = tasks.length, done = tasks.filter(x => x.done).length;
       const pct = t ? Math.round((done/t)*100) : 0; mTasks += t; mDone += done;
       const el = document.createElement("div"); el.className = "month-cell" + (key === todayKey() ? " today" : "") + (t > 0 ? " has-data" : "");
-      el.innerHTML = `<div>${day}</div>${t > 0 ?
+      el.innerHTML = `<div>${day}</div>${t > 0 ? `<div class="cell-pct">${pct}%</div>` : ""}`; grid.appendChild(el);
+    }
+    const mPct = mTasks ? Math.round((mDone/mTasks)*100) : 0;
+    document.getElementById("monthPct").textContent = mPct + "%";
+    document.getElementById("monthDone").textContent = mDone;
+    document.getElementById("monthIncomplete").textContent = mTasks - mDone;
+    document.getElementById("monthProgressBar").style.width = mPct + "%";
+    document.getElementById("monthBestWeek").textContent = "—"; 
+  }
+  document.getElementById("prevMonth").addEventListener("click", () => { currentMonth.setMonth(currentMonth.getMonth() - 1); renderMonthly(); });
+  document.getElementById("nextMonth").addEventListener("click", () => { currentMonth.setMonth(currentMonth.getMonth() + 1); renderMonthly(); });
+  const goalList = document.getElementById("goalList");
+  let editingGoalId = null;
+  function renderGoals() {
+    goalList.innerHTML = "";
+    if (state.goals.length === 0) { goalList.innerHTML = '<div class="card empty-state">No goals yet. Add one to start dreaming big 🌟</div>'; return; }
+    state.goals.forEach(g => {
+      const card = document.createElement("div"); card.className = "goal-card" + (g.done ? " completed" : "");
+      card.innerHTML = `<div class="goal-header"><div class="goal-title">${escapeHtml(g.title)} ${g.done ? "✅" : ""}</div></div>${g.desc ? `<div class="goal-desc">${escapeHtml(g.desc)}</div>` : ""}<div class="goal-meta">${g.target ? `<span>🎯 Target: ${g.target}</span>` : ""}<span>📈 ${g.progress}%</span><span>${g.done ? "✔ Completed" : "⏳ Active"}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${g.progress}%"></div></div><div class="goal-actions"><button class="small ghost" data-goal-act="toggle" data-id="${g.id}">${g.done ? "Reopen" : "Mark Done"}</button><button class="small ghost" data-goal-act="edit" data-id="${g.id}">Edit</button><button class="small danger" data-goal-act="del" data-id="${g.id}">Delete</button></div>`;
+      goalList.appendChild(card);
+    });
+  }
+  document.getElementById("addGoalBtn").addEventListener("click", () => {
+    editingGoalId = null; document.getElementById("goalModalTitle").textContent = "New Goal";
+    document.getElementById("goalTitle").value = ""; document.getElementById("goalDesc").value = "";
+    document.getElementById("goalTarget").value = ""; document.getElementById("goalProgress").value = 0;
+    document.getElementById("goalModal").classList.add("active");
+  });
+  document.getElementById("cancelGoal").addEventListener("click", () => { document.getElementById("goalModal").classList.remove("active"); });
+  document.getElementById("saveGoal").addEventListener("click", () => {
+    const title = document.getElementById("goalTitle").value.trim(); if (!title) return;
+    const desc = document.getElementById("goalDesc").value.trim(), target = document.getElementById("goalTarget").value;
+    let progress = parseInt(document.getElementById("goalProgress").value, 10) || 0; progress = Math.max(0, Math.min(100, progress));
+    if (editingGoalId) { const g = state.goals.find(x => x.id === editingGoalId); if (g) { g.title = title; g.desc = desc; g.target = target; g.progress = progress; } }
+    else { state.goals.push({ id: uid(), title, desc, target, progress, done: false }); }
+    save(); renderGoals(); document.getElementById("goalModal").classList.remove("active");
+  });
+  goalList.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-goal-act]"); if (!btn) return;
+    const id = btn.dataset.id, act = btn.dataset.goalAct, g = state.goals.find(x => x.id === id); if (!g) return;
+    if (act === "toggle") { g.done = !g.done; if (g.done) g.progress = 100; save(); renderGoals(); }
+    else if (act === "del") { state.goals = state.goals.filter(x => x.id !== id); save(); renderGoals(); }
+    else if (act === "edit") { editingGoalId = id; document.getElementById("goalModalTitle").textContent = "Edit Goal"; document.getElementById("goalTitle").value = g.title; document.getElementById("goalDesc").value = g.desc || ""; document.getElementById("goalTarget").value = g.target || ""; document.getElementById("goalProgress").value = g.progress; document.getElementById("goalModal").classList.add("active"); }
+  });
+  load(); renderDaily(); renderWeekly(); renderMonthly(); renderGoals();
+})();
